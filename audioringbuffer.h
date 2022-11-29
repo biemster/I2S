@@ -19,51 +19,47 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#define NARB 8
+
 #pragma once
-#include <Arduino.h>
-#include <vector>
 
-class AudioRingBuffer {
-public:
-    AudioRingBuffer(size_t bufferCount, size_t bufferWords, int32_t silenceSample, PinMode direction = OUTPUT);
-    ~AudioRingBuffer();
+void ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction = OUTPUT);
+void ARB_deinit();
 
-    void setCallback(void (*fn)());
+void ARB_setCallback(void (*fn)());
 
-    bool begin(int dreq, volatile void *pioFIFOAddr);
+bool ARB_begin(int dreq, volatile void *pioFIFOAddr);
 
-    bool write(uint32_t v, bool sync = true);
-    bool read(uint32_t *v, bool sync = true);
-    void flush();
+bool ARB_write(uint32_t v, bool sync = true);
+bool ARB_read(uint32_t *v, bool sync = true);
+void ARB_flush();
 
-    bool getOverUnderflow();
-    int available();
+bool ARB_getOverUnderflow();
+int ARB_available();
 
-private:
-    void _dmaIRQ(int channel);
-    static void _irq();
+void ARB_dmaIRQ(int channel);
+static void ARB_irq();
 
-    typedef struct {
-        uint32_t *buff;
-        volatile bool empty;
-    } AudioBuffer;
+typedef struct {
+    uint32_t *buff;
+    volatile bool empty;
+} AudioBuffer;
 
-    bool _running = false;
-    std::vector<AudioBuffer*> _buffers;
-    volatile int _curBuffer;
-    volatile int _nextBuffer;
-    size_t _chunkSampleCount;
-    int _bitsPerSample;
-    size_t _wordsPerBuffer;
-    size_t _bufferCount;
-    bool _isOutput;
-    int32_t _silenceSample;
-    int _channelDMA[2];
-    void (*_callback)();
+bool ARB_running = false;
+AudioBuffer* ARB_buffers[NARB];
+volatile int ARB_curBuffer;
+volatile int ARB_nextBuffer;
+size_t ARB_chunkSampleCount;
+int ARB_bitsPerSample;
+size_t ARB_wordsPerBuffer;
+size_t ARB_bufferCount;
+bool ARB_isOutput;
+int32_t ARB_silenceSample;
+int ARB_channelDMA[2];
+void (*ARB_callback)();
 
-    bool _overunderflow;
+bool ARB_overunderflow;
 
-    // User buffer pointer
-    int _userBuffer = -1;
-    size_t _userOff = 0;
-};
+// User buffer pointer
+int ARB_userBuffer = -1;
+size_t ARB_userOff = 0;
