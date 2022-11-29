@@ -25,9 +25,6 @@
 #include "pio_i2s.pio.h"
 #include "audioringbuffer.h"
 
-static int              __channelCount = 0;    // # of channels left.  When we hit 0, then remove our handler
-static AudioRingBuffer* __channelMap[12];      // Lets the IRQ handler figure out where to dispatch to
-
 ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
     ARB_running = false;
     ARB_silenceSample = silenceSample;
@@ -45,18 +42,9 @@ ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
 
 ARB_deinit() {
     if (ARB_running) {
-        for (auto i = 0; i < 2; i++) {
-            dma_channel_set_irq0_enabled(ARB_channelDMA[i], false);
-            dma_channel_unclaim(ARB_channelDMA[i]);
-            __channelMap[ARB_channelDMA[i]] = NULL;
-        }
-        while (_buffers.size()) {
-            auto ab = _buffers.back();
-            _buffers.pop_back();
-            delete[] ab->buff;
-            delete ab;
-        }
-        __channelCount--;
+        dma_channel_set_irq0_enabled(ARB_channelDMA, false);
+        dma_channel_unclaim(ARB_channelDMA);
+
         if (!__channelCount) {
             irq_set_enabled(DMA_IRQ_0, false);
             // TODO - how can we know if there are no other parts of the core using DMA0 IRQ??
@@ -80,48 +68,38 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
             }
         }
     }
-    // Get ping and pong DMA channels
-    for (auto i = 0; i < 2; i++) {
-        ARB_channelDMA[i] = dma_claim_unused_channel(true);
-        if (ARB_channelDMA[i] == -1) {
-            if (i == 1) {
-                dma_channel_unclaim(ARB_channelDMA[0]);
-            }
-            return false;
-        }
-    }
-    bool needSetIRQ = __channelCount == 0;
-    // Need to know both channels to set up ping-pong, so do in 2 stages
-    for (auto i = 0; i < 2; i++) {
-        dma_channel_config c = dma_channel_get_default_config(ARB_channelDMA[i]);
-        channel_config_set_transfer_data_size(&c, DMA_SIZE_32); // 32b transfers into PIO FIFO
-        if (ARB_isOutput) {
-            channel_config_set_read_increment(&c, true); // Reading incrementing addresses
-            channel_config_set_write_increment(&c, false); // Writing to the same FIFO address
-        } else {
-            channel_config_set_read_increment(&c, false); // Reading same FIFO address
-            channel_config_set_write_increment(&c, true); // Writing to incrememting buffers
-        }
-        channel_config_set_dreq(&c, dreq); // Wait for the PIO TX FIFO specified
-        channel_config_set_chain_to(&c, ARB_channelDMA[i ^ 1]); // Start other channel when done
-        channel_config_set_irq_quiet(&c, false); // Need IRQs
 
-        if (ARB_isOutput) {
-            dma_channel_configure(ARB_channelDMA[i], &c, pioFIFOAddr, ARB_buffers[i]->buff, ARB_wordsPerBuffer, false);
-        } else {
-            dma_channel_configure(ARB_channelDMA[i], &c, ARB_buffers[i]->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
-        }
-        dma_channel_set_irq0_enabled(ARB_channelDMA[i], true);
-        __channelMap[ARB_channelDMA[i]] = this; /// ??? 
-        __channelCount++;
+    ARB_channelDMA = dma_claim_unused_channel(true);
+    if (ARB_channelDMA == -1) {
+        return false;
     }
-    if (needSetIRQ) {
-        irq_add_shared_handler(DMA_IRQ_0, _irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
-        irq_set_enabled(DMA_IRQ_0, true);
+
+    dma_channel_config c = dma_channel_get_default_config(ARB_channelDMA);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32); // 32b transfers into PIO FIFO
+    if(ARB_isOutput) {
+        channel_config_set_read_increment(&c, true); // Reading incrementing addresses
+        channel_config_set_write_increment(&c, false); // Writing to the same FIFO address
     }
+    else {
+        channel_config_set_read_increment(&c, false); // Reading same FIFO address
+        channel_config_set_write_increment(&c, true); // Writing to incrememting buffers
+    }
+    channel_config_set_dreq(&c, dreq); // Wait for the PIO TX FIFO specified
+    channel_config_set_irq_quiet(&c, false); // Need IRQs
+
+    if(ARB_isOutput) {
+        dma_channel_configure(ARB_channelDMA, &c, pioFIFOAddr, ARB_buffers[i]->buff, ARB_wordsPerBuffer, false);
+    } else {
+        dma_channel_configure(ARB_channelDMA, &c, ARB_buffers[i]->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
+    }
+    dma_channel_set_irq0_enabled(ARB_channelDMA, true);
+
+    irq_add_shared_handler(DMA_IRQ_0, _irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
+    irq_set_enabled(DMA_IRQ_0, true);
+
     ARB_curBuffer = 0;
     ARB_nextBuffer = 2 % ARB_bufferCount;
-    dma_channel_start(ARB_channelDMA[0]);
+    dma_channel_start(ARB_channelDMA);
     return true;
 }
 
@@ -243,9 +221,7 @@ void __not_in_flash_func(_dmaIRQ)(int channel) {
 }
 
 void __not_in_flash_func(_irq)() {
-    for (size_t i = 0; i < sizeof(__channelMap); i++) {
-        if (dma_channel_get_irq0_status(i) && __channelMap[i]) {
-            __channelMap[i]->_dmaIRQ(i);
-        }
+    if (dma_channel_get_irq0_status(ARB_channelDMA)) {
+        _dmaIRQ(ARB_channelDMA);
     }
 }
