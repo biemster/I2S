@@ -25,16 +25,11 @@
 
 void I2S_init(PinMode direction);
 
-bool I2S_setBCLK(pin_size_t pin);
-bool I2S_setDATA(pin_size_t pin);
+bool I2S_setBCLK(uint pin);
+bool I2S_setDATA(uint pin);
 bool I2S_setBitsPerSample(int bps);
-bool I2S_setBuffers(size_t bufferWords, int32_t silenceSample = 0);
+bool I2S_setBuffers(size_t bufferWords, int32_t silenceSample);
 bool I2S_setFrequency(int newFreq);
-
-bool I2S_begin(long sampleRate) {
-    I2S_setFrequency(sampleRate);
-    return I2S_begin();
-}
 
 bool I2S_begin();
 void I2S_end();
@@ -47,27 +42,6 @@ void I2S_flush();
 
 size_t I2S_write(const uint8_t *buffer, size_t size);
 int I2S_availableForWrite();
-
-// Try and make I2S_write() do what makes sense, namely write
-// one sample (L or R) at the I2S configured bit width
-size_t I2S_write(uint8_t s) {
-    return _writeNatural(s & 0xff);
-}
-size_t I2S_write(int8_t s) {
-    return write((uint8_t)s);
-}
-size_t I2S_write(uint16_t s) {
-    return _writeNatural(s & 0xffff);
-}
-size_t I2S_write(int16_t s) {
-    return write((uint16_t)s);
-}
-size_t I2S_write(uint32_t s) {
-    return _writeNatural(s);
-}
-size_t I2S_write(int32_t s) {
-    return write((uint32_t)s);
-}
 
 // Write 32 bit value to port, user responsible for packing/alignment, etc.
 size_t I2S_write(int32_t val, bool sync);
@@ -93,8 +67,8 @@ void I2S_onTransmit(void(*)(void));
 void I2S_onReceive(void(*)(void));
 
 
-pin_size_t I2S_pinBCLK;
-pin_size_t I2S_pinDOUT;
+uint I2S_pinBCLK;
+uint I2S_pinDOUT;
 int I2S_bps;
 int I2S_freq;
 size_t I2S_bufferWords;

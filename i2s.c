@@ -53,7 +53,7 @@ void I2S_init(PinMode direction) {
     I2S_silenceSample = 0;
 }
 
-bool I2S_setBCLK(pin_size_t pin) {
+bool I2S_setBCLK(uint pin) {
     if (I2S_running || (pin > 28)) {
         return false;
     }
@@ -61,7 +61,7 @@ bool I2S_setBCLK(pin_size_t pin) {
     return true;
 }
 
-bool I2S_setDATA(pin_size_t pin) {
+bool I2S_setDATA(uint pin) {
     if (I2S_running || (pin > 29)) {
         return false;
     }
@@ -329,26 +329,6 @@ bool I2S_read32(int32_t *l, int32_t *r) {
     read(l, true);
     read(r, true);
     return true;
-}
-
-size_t I2S_write(const uint8_t *buffer, size_t size) {
-    // We can only write 32-bit chunks here
-    if (size & 0x3) {
-        return 0;
-    }
-    size_t writtenSize = 0;
-    int32_t *p = (int32_t *)buffer;
-    while (size) {
-        if (!write((int32_t)*p)) {
-            // Blocked, stop write here
-            return writtenSize;
-        } else {
-            p++;
-            size -= 4;
-            writtenSize += 4;
-        }
-    }
-    return writtenSize;
 }
 
 int I2S_availableForWrite() {
