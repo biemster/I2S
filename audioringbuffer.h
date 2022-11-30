@@ -29,6 +29,7 @@ void ARB_deinit();
 void ARB_setCallback(void (*fn)());
 
 bool ARB_begin(int dreq, volatile void *pioFIFOAddr);
+void ARB_dmaConfig(int channel);
 
 bool ARB_write(uint32_t v, bool sync = true);
 bool ARB_read(uint32_t *v, bool sync = true);
@@ -45,17 +46,23 @@ typedef struct {
     volatile bool empty;
 } AudioBuffer;
 
+AudioBuffer** ARB_currbuffers;
+AudioBuffer* ARB1_buffers[NARB];
+volatile int ARB1_curBuffer;
+volatile int ARB1_nextBuffer;
+AudioBuffer* ARB2_buffers[NARB];
+volatile int ARB2_curBuffer;
+volatile int ARB2_nextBuffer;
+
 bool ARB_running = false;
-AudioBuffer* ARB_buffers[NARB];
-volatile int ARB_curBuffer;
-volatile int ARB_nextBuffer;
 size_t ARB_chunkSampleCount;
 int ARB_bitsPerSample;
 size_t ARB_wordsPerBuffer;
 size_t ARB_bufferCount;
 bool ARB_isOutput;
 int32_t ARB_silenceSample;
-int ARB_channelDMA[2];
+int ARB_channelDMA1;
+int ARB_channelDMA2;
 void (*ARB_callback)();
 
 bool ARB_overunderflow;

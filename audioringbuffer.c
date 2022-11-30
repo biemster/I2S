@@ -35,21 +35,23 @@ ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
     ARB_userBuffer = -1;
     ARB_userOff = 0;
     for (size_t i = 0; i < NARB; i++) {
-        ARB_buffers[i].buff = uint32_t[ARB_wordsPerBuffer];
-        ARB_buffers[i].empty = true;
+        ARB1_buffers[i]->buff = uint32_t[ARB_wordsPerBuffer];
+        ARB2_buffers[i]->buff = uint32_t[ARB_wordsPerBuffer];
+        ARB1_buffers[i]->empty = true;
+        ARB2_buffers[i]->empty = true;
     }
 }
 
 ARB_deinit() {
     if (ARB_running) {
-        dma_channel_set_irq0_enabled(ARB_channelDMA, false);
-        dma_channel_unclaim(ARB_channelDMA);
+        dma_channel_set_irq0_enabled(ARB1_channelDMA, false);
+        dma_channel_set_irq0_enabled(ARB2_channelDMA, false);
+        dma_channel_unclaim(ARB1_channelDMA);
+        dma_channel_unclaim(ARB2_channelDMA);
 
-        if (!__channelCount) {
-            irq_set_enabled(DMA_IRQ_0, false);
-            // TODO - how can we know if there are no other parts of the core using DMA0 IRQ??
-            irq_remove_handler(DMA_IRQ_0, _irq);
-        }
+        irq_set_enabled(DMA_IRQ_0, false);
+        // TODO - how can we know if there are no other parts of the core using DMA0 IRQ??
+        irq_remove_handler(DMA_IRQ_0, _irq);
     }
 }
 
@@ -61,20 +63,45 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
     ARB_running = true;
     // Set all buffers to silence, empty
     for (int i = 0; i < NARB; i++) {
-        ARB_buffers[i]->empty = true;
+        ARB1_buffers[i]->empty = true;
+        ARB2_buffers[i]->empty = true;
         if (ARB_isOutput) {
             for (uint32_t x = 0; x < ARB_wordsPerBuffer; x++) {
-                ARB_buffers[i]->buff[x] = ARB_silenceSample;
+                ARB1_buffers[i]->buff[x] = ARB_silenceSample;
+                ARB2_buffers[i]->buff[x] = ARB_silenceSample;
             }
         }
     }
 
-    ARB_channelDMA = dma_claim_unused_channel(true);
-    if (ARB_channelDMA == -1) {
+    // Get ping and pong DMA channels
+    ARB1_channelDMA = dma_claim_unused_channel(true);
+    if(ARB1_channelDMA == -1) {
+        return false;
+    }
+    ARB2_channelDMA = dma_claim_unused_channel(true);
+    if(ARB2_channelDMA == -1) {
+        dma_channel_unclaim(ARB_channelDMA[0]);
         return false;
     }
 
-    dma_channel_config c = dma_channel_get_default_config(ARB_channelDMA);
+    ARB_dmaConfig(ARB1_channelDMA);
+    ARB_dmaConfig(ARB2_channelDMA);
+
+    irq_add_shared_handler(DMA_IRQ_0, _irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
+    irq_set_enabled(DMA_IRQ_0, true);
+
+    ARB1_curBuffer = 0;
+    ARB2_curBuffer = 0;
+    ARB1_nextBuffer = 2 % ARB_bufferCount;
+    ARB2_nextBuffer = 2 % ARB_bufferCount;
+
+    dma_channel_start(channel);
+
+    return true;
+}
+
+void ARB_dmaConfig(int channel) {
+    dma_channel_config c = dma_channel_get_default_config(channel);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32); // 32b transfers into PIO FIFO
     if(ARB_isOutput) {
         channel_config_set_read_increment(&c, true); // Reading incrementing addresses
@@ -85,22 +112,15 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
         channel_config_set_write_increment(&c, true); // Writing to incrememting buffers
     }
     channel_config_set_dreq(&c, dreq); // Wait for the PIO TX FIFO specified
+    channel_config_set_chain_to(&c, (channel == ARB1_channelDMA) ? ARB2_channelDMA : ARB1_channelDMA); // Start other channel when done
     channel_config_set_irq_quiet(&c, false); // Need IRQs
 
     if(ARB_isOutput) {
-        dma_channel_configure(ARB_channelDMA, &c, pioFIFOAddr, ARB_buffers[i]->buff, ARB_wordsPerBuffer, false);
+        dma_channel_configure(channel, &c, pioFIFOAddr, (channel == ARB1_channelDMA) ? ARB1_buffers->buff : ARB2_buffers->buff, ARB_wordsPerBuffer, false);
     } else {
-        dma_channel_configure(ARB_channelDMA, &c, ARB_buffers[i]->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
+        dma_channel_configure(channel, &c, (channel == ARB1_channelDMA) ? ARB1_buffers->buff : ARB2_buffers->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
     }
-    dma_channel_set_irq0_enabled(ARB_channelDMA, true);
-
-    irq_add_shared_handler(DMA_IRQ_0, _irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
-    irq_set_enabled(DMA_IRQ_0, true);
-
-    ARB_curBuffer = 0;
-    ARB_nextBuffer = 2 % ARB_bufferCount;
-    dma_channel_start(ARB_channelDMA);
-    return true;
+    dma_channel_set_irq0_enabled(channel, true);
 }
 
 bool ARB_write(uint32_t v, bool sync) {
@@ -112,11 +132,11 @@ bool ARB_write(uint32_t v, bool sync) {
         ARB_userBuffer = (ARB_nextBuffer + 2) % ARB_bufferCount;
         ARB_userOff = 0;
     }
-    if (!ARB_buffers[ARB_userBuffer]->empty) {
+    if (!ARB_currbuffers[ARB_userBuffer]->empty) {
         if (!sync) {
             return false;
         } else {
-            while (!ARB_buffers[ARB_userBuffer]->empty) {
+            while (!ARB_currbuffers[ARB_userBuffer]->empty) {
                 /* noop busy wait */
             }
         }
@@ -130,9 +150,9 @@ bool ARB_write(uint32_t v, bool sync) {
             }
         }
     }
-    ARB_buffers[ARB_userBuffer]->buff[ARB_userOff++] = v;
+    ARB_currbuffers[ARB_userBuffer]->buff[ARB_userOff++] = v;
     if (ARB_userOff == ARB_wordsPerBuffer) {
-        ARB_buffers[ARB_userBuffer]->empty = false;
+        ARB_currbuffers[ARB_userBuffer]->empty = false;
         ARB_userBuffer = (ARB_userBuffer + 1) % ARB_bufferCount;
         ARB_userOff = 0;
     }
@@ -148,11 +168,11 @@ bool ARB_read(uint32_t *v, bool sync) {
         ARB_userBuffer = (ARB_curBuffer - 1 + ARB_bufferCount) % ARB_bufferCount;
         ARB_userOff = 0;
     }
-    if (ARB_buffers[ARB_userBuffer]->empty) {
+    if (ARB_currbuffers[ARB_userBuffer]->empty) {
         if (!sync) {
             return false;
         } else {
-            while (ARB_buffers[ARB_userBuffer]->empty) {
+            while (ARB_currbuffers[ARB_userBuffer]->empty) {
                 /* noop busy wait */
             }
         }
@@ -166,9 +186,9 @@ bool ARB_read(uint32_t *v, bool sync) {
             }
         }
     }
-    uint32_t* ret = ARB_buffers[ARB_userBuffer]->buff[ARB_userOff++];
+    uint32_t* ret = ARB_currbuffers[ARB_userBuffer]->buff[ARB_userOff++];
     if (ARB_userOff == ARB_wordsPerBuffer) {
-        ARB_buffers[ARB_userBuffer]->empty = true;
+        ARB_currbuffers[ARB_userBuffer]->empty = true;
         ARB_userBuffer = (ARB_userBuffer + 1) % ARB_bufferCount;
         ARB_userOff = 0;
     }
@@ -199,17 +219,18 @@ void ARB_flush() {
 }
 
 void __not_in_flash_func(_dmaIRQ)(int channel) {
+    ARB_currbuffers = (channel = ARB1_channelDMA) ? ARB1_buffers : ARB2_buffers;
     if (ARB_isOutput) {
         for (uint32_t x = 0; x < ARB_wordsPerBuffer; x++) {
-            ARB_buffers[ARB_curBuffer]->buff[x] = ARB_silenceSample;
+            ARB_currbuffers[ARB_curBuffer]->buff[x] = ARB_silenceSample;
         }
-        ARB_buffers[ARB_curBuffer]->empty = true;
-        ARB_overunderflow = ARB_overunderflow | ARB_buffers[ARB_nextBuffer]->empty;
-        dma_channel_set_read_addr(channel, ARB_buffers[ARB_nextBuffer]->buff, false);
+        ARB_currbuffers[ARB_curBuffer]->empty = true;
+        ARB_overunderflow = ARB_overunderflow | ARB_currbuffers[ARB_nextBuffer]->empty;
+        dma_channel_set_read_addr(channel, ARB_currbuffers[ARB_nextBuffer]->buff, false);
     } else {
-        ARB_buffers[ARB_curBuffer]->empty = false;
-        ARB_overunderflow = ARB_overunderflow | !ARB_buffers[ARB_nextBuffer]->empty;
-        dma_channel_set_write_addr(channel, ARB_buffers[ARB_nextBuffer]->buff, false);
+        ARB_currbuffers[ARB_curBuffer]->empty = false;
+        ARB_overunderflow = ARB_overunderflow | !ARB_currbuffers[ARB_nextBuffer]->empty;
+        dma_channel_set_write_addr(channel, ARB_currbuffers[ARB_nextBuffer]->buff, false);
     }
     dma_channel_set_trans_count(channel, ARB_wordsPerBuffer, false);
     ARB_curBuffer = (ARB_curBuffer + 1) % ARB_bufferCount;
