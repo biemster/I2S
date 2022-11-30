@@ -61,8 +61,8 @@ size_t ARB_wordsPerBuffer;
 size_t ARB_bufferCount;
 bool ARB_isOutput;
 int32_t ARB_silenceSample;
-int ARB_channelDMA1;
-int ARB_channelDMA2;
+int ARB1_channelDMA;
+int ARB2_channelDMA;
 void (*ARB_callback)();
 
 bool ARB_overunderflow;

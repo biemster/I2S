@@ -218,8 +218,10 @@ void ARB_flush() {
     }
 }
 
-void __not_in_flash_func(_dmaIRQ)(int channel) {
-    ARB_currbuffers = (channel = ARB1_channelDMA) ? ARB1_buffers : ARB2_buffers;
+void __not_in_flash_func(ARB_dmaIRQ)(int channel) {
+    ARB_currbuffers = (channel == ARB1_channelDMA) ? ARB1_buffers : ARB2_buffers;
+    int ARB_curBuffer = (channel == ARB1_channelDMA) ? ARB1_curBuffer : ARB2_curBuffer;
+    int ARB_nextBuffer = (channel == ARB1_channelDMA) ? ARB1_nextBuffer : ARB2_nextBuffer;
     if (ARB_isOutput) {
         for (uint32_t x = 0; x < ARB_wordsPerBuffer; x++) {
             ARB_currbuffers[ARB_curBuffer]->buff[x] = ARB_silenceSample;
@@ -233,16 +235,27 @@ void __not_in_flash_func(_dmaIRQ)(int channel) {
         dma_channel_set_write_addr(channel, ARB_currbuffers[ARB_nextBuffer]->buff, false);
     }
     dma_channel_set_trans_count(channel, ARB_wordsPerBuffer, false);
-    ARB_curBuffer = (ARB_curBuffer + 1) % ARB_bufferCount;
-    ARB_nextBuffer = (ARB_nextBuffer + 1) % ARB_bufferCount;
+
+    if(channel == ARB1_channelDMA) {
+        ARB1_curBuffer = (ARB1_curBuffer + 1) % ARB_bufferCount;
+        ARB1_nextBuffer = (ARB1_nextBuffer + 1) % ARB_bufferCount;
+    }
+    else {
+        ARB2_curBuffer = (ARB1_curBuffer + 1) % ARB_bufferCount;
+        ARB2_nextBuffer = (ARB1_nextBuffer + 1) % ARB_bufferCount;
+    }
+
     dma_channel_acknowledge_irq0(channel);
     if (ARB_callback) {
         ARB_callback();
     }
 }
 
-void __not_in_flash_func(_irq)() {
-    if (dma_channel_get_irq0_status(ARB_channelDMA)) {
-        _dmaIRQ(ARB_channelDMA);
+void __not_in_flash_func(ARB_irq)() {
+    if (dma_channel_get_irq0_status(ARB1_channelDMA)) {
+        _dmaIRQ(ARB1_channelDMA);
+    }
+    if (dma_channel_get_irq0_status(ARB2_channelDMA)) {
+        _dmaIRQ(ARB2_channelDMA);
     }
 }
