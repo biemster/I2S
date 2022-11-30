@@ -31,7 +31,7 @@ void ARB_deinit();
 void ARB_setCallback(void (*fn)());
 
 bool ARB_begin(int dreq, volatile void *pioFIFOAddr);
-void ARB_dmaConfig(int channel);
+void ARB_dmaConfig(int channel, int dreq, volatile void *pioFIFOAddr);
 
 bool ARB_write(uint32_t v, bool sync);
 bool ARB_read(uint32_t *v, bool sync);

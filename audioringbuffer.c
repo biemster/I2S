@@ -19,6 +19,7 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "pico/stdlib.h"
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
@@ -84,8 +85,8 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
         return false;
     }
 
-    ARB_dmaConfig(ARB1_channelDMA);
-    ARB_dmaConfig(ARB2_channelDMA);
+    ARB_dmaConfig(ARB1_channelDMA, dreq, pioFIFOAddr);
+    ARB_dmaConfig(ARB2_channelDMA, dreq, pioFIFOAddr);
 
     irq_add_shared_handler(DMA_IRQ_0, ARB_irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
     irq_set_enabled(DMA_IRQ_0, true);
@@ -101,7 +102,7 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
     return true;
 }
 
-void ARB_dmaConfig(int channel) {
+void ARB_dmaConfig(int channel, int dreq, volatile void *pioFIFOAddr) {
     dma_channel_config c = dma_channel_get_default_config(channel);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32); // 32b transfers into PIO FIFO
     if(ARB_isOutput) {
