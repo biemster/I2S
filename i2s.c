@@ -20,7 +20,6 @@
 */
 
 #include "pico/stdlib.h"
-#include "hardware/pio.h"
 #include "pio_i2s.pio.h"
 #include "i2s.h"
 

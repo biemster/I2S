@@ -21,6 +21,7 @@
 #ifndef __I2S_H__
 #define __I2S_H__
 
+#include "hardware/pio.h"
 #include "audioringbuffer.h"
 
 void I2S_init(PinMode direction);
