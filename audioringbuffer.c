@@ -124,6 +124,8 @@ void ARB_dmaConfig(int channel) {
 }
 
 bool ARB_write(uint32_t v, bool sync) {
+    int ARB_curBuffer = (ARB_currbuffers == ARB1_buffers) ? ARB1_curBuffer : ARB2_curBuffer;
+    int ARB_nextBuffer = (ARB_currbuffers == ARB1_buffers) ? ARB1_nextBuffer : ARB2_nextBuffer;
     if (!ARB_running || !ARB_currbuffers || !ARB_isOutput) {
         return false;
     }
@@ -160,6 +162,7 @@ bool ARB_write(uint32_t v, bool sync) {
 }
 
 bool ARB_read(uint32_t *v, bool sync) {
+    int ARB_curBuffer = (ARB_currbuffers == ARB1_buffers) ? ARB1_curBuffer : ARB2_curBuffer;
     if (!ARB_running || !ARB_currbuffers || ARB_isOutput) {
         return false;
     }
@@ -207,12 +210,14 @@ int ARB_available() {
         return 0;
     }
     int avail;
+    int ARB_curBuffer = (ARB_currbuffers == ARB1_buffers) ? ARB1_curBuffer : ARB2_curBuffer;
     avail = ARB_wordsPerBuffer - ARB_userOff;
     avail += ((ARB_bufferCount + ARB_curBuffer - ARB_userBuffer) % ARB_bufferCount) * ARB_wordsPerBuffer;
     return avail;
 }
 
 void ARB_flush() {
+    int ARB_curBuffer = (ARB_currbuffers == ARB1_buffers) ? ARB1_curBuffer : ARB2_curBuffer;
     while (ARB_curBuffer != ARB_userBuffer) {
         // busy wait
     }
@@ -253,9 +258,9 @@ void __not_in_flash_func(ARB_dmaIRQ)(int channel) {
 
 void __not_in_flash_func(ARB_irq)() {
     if (dma_channel_get_irq0_status(ARB1_channelDMA)) {
-        _dmaIRQ(ARB1_channelDMA);
+        ARB_dmaIRQ(ARB1_channelDMA);
     }
     if (dma_channel_get_irq0_status(ARB2_channelDMA)) {
-        _dmaIRQ(ARB2_channelDMA);
+        ARB_dmaIRQ(ARB2_channelDMA);
     }
 }
