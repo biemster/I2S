@@ -25,7 +25,7 @@
 #include "pio_i2s.pio.h"
 #include "audioringbuffer.h"
 
-ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
+void ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
     ARB_running = false;
     ARB_silenceSample = silenceSample;
     ARB_wordsPerBuffer = bufferWords;
@@ -42,7 +42,7 @@ ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
     }
 }
 
-ARB_deinit() {
+void ARB_deinit() {
     if (ARB_running) {
         dma_channel_set_irq0_enabled(ARB1_channelDMA, false);
         dma_channel_set_irq0_enabled(ARB2_channelDMA, false);
