@@ -28,6 +28,8 @@ void I2S_init(PinMode direction) {
     I2S_running = false;
     I2S_bps = 16;
     I2S_writtenHalf = false;
+    I2S_holdWord = 0;
+    I2S_wasHolding = 0;
     I2S_isOutput = direction == OUTPUT;
     I2S_pinBCLK = 26;
     I2S_pinDOUT = 28;
@@ -50,6 +52,7 @@ void I2S_init(PinMode direction) {
     I2S_cb = NULL;
     I2S_bufferWords = 16;
     I2S_silenceSample = 0;
+
 }
 
 bool I2S_setBCLK(uint pin) {

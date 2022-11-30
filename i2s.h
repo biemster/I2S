@@ -83,8 +83,8 @@ size_t I2S_writeNatural(int32_t s);
 uint32_t I2S_writtenData;
 bool I2S_writtenHalf;
 
-int32_t I2S_holdWord = 0;
-int I2S_wasHolding = 0;
+int32_t I2S_holdWord;
+int I2S_wasHolding;
 
 void (*I2S_cb)();
 

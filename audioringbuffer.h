@@ -56,7 +56,7 @@ AudioBuffer* ARB2_buffers[NARB];
 volatile int ARB2_curBuffer;
 volatile int ARB2_nextBuffer;
 
-bool ARB_running = false;
+bool ARB_running;
 size_t ARB_chunkSampleCount;
 int ARB_bitsPerSample;
 size_t ARB_wordsPerBuffer;
@@ -70,7 +70,7 @@ void (*ARB_callback)();
 bool ARB_overunderflow;
 
 // User buffer pointer
-int ARB_userBuffer = -1;
-size_t ARB_userOff = 0;
+int ARB_userBuffer;
+size_t ARB_userOff;
 
 #endif // __AUDIORINGBUFFER_H__
