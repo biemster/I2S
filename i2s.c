@@ -18,6 +18,8 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+#include "pico/stdlib.h"
 #include "audioringbuffer.h"
 #include "i2s.h"
 #include "pio_i2s.pio.h"

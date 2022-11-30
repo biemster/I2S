@@ -18,8 +18,8 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-
-#pragma once
+#ifndef __I2S_H__
+#define __I2S_H__
 
 #include "audioringbuffer.h"
 
@@ -118,3 +118,5 @@ void (*I2S_cb)();
 PIOProgram *I2S_pioprog;
 PIO I2S_pio;
 int I2S_sm;
+
+#endif // __I2S_H__

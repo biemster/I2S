@@ -18,10 +18,10 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifndef __AUDIORINGBUFFER_H__
+#define __AUDIORINGBUFFER_H__
 
 #define NARB 8
-
-#pragma once
 
 typedef enum PinMode {INPUT,OUTPUT} PinMode;
 
@@ -72,3 +72,5 @@ bool ARB_overunderflow;
 // User buffer pointer
 int ARB_userBuffer = -1;
 size_t ARB_userOff = 0;
+
+#endif // __AUDIORINGBUFFER_H__
