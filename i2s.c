@@ -21,9 +21,8 @@
 
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
-#include "audioringbuffer.h"
-#include "i2s.h"
 #include "pio_i2s.pio.h"
+#include "i2s.h"
 
 
 void I2S_init(PinMode direction) {

@@ -21,6 +21,8 @@
 #ifndef __I2S_H__
 #define __I2S_H__
 
+#include "audioringbuffer.h"
+
 void I2S_init(PinMode direction);
 
 bool I2S_setBCLK(uint pin);
