@@ -35,8 +35,8 @@ void ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {
     ARB_userBuffer = -1;
     ARB_userOff = 0;
     for (size_t i = 0; i < NARB; i++) {
-        ARB1_buffers[i]->buff = uint32_t[ARB_wordsPerBuffer];
-        ARB2_buffers[i]->buff = uint32_t[ARB_wordsPerBuffer];
+        ARB1_buffers[i]->buff = malloc(ARB_wordsPerBuffer * sizeof(uint32_t));
+        ARB2_buffers[i]->buff = malloc(ARB_wordsPerBuffer * sizeof(uint32_t));
         ARB1_buffers[i]->empty = true;
         ARB2_buffers[i]->empty = true;
     }
@@ -117,9 +117,9 @@ void ARB_dmaConfig(int channel) {
     channel_config_set_irq_quiet(&c, false); // Need IRQs
 
     if(ARB_isOutput) {
-        dma_channel_configure(channel, &c, pioFIFOAddr, (channel == ARB1_channelDMA) ? ARB1_buffers->buff : ARB2_buffers->buff, ARB_wordsPerBuffer, false);
+        dma_channel_configure(channel, &c, pioFIFOAddr, (channel == ARB1_channelDMA) ? ARB1_buffers[0]->buff : ARB2_buffers[0]->buff, ARB_wordsPerBuffer, false);
     } else {
-        dma_channel_configure(channel, &c, (channel == ARB1_channelDMA) ? ARB1_buffers->buff : ARB2_buffers->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
+        dma_channel_configure(channel, &c, (channel == ARB1_channelDMA) ? ARB1_buffers[0]->buff : ARB2_buffers[0]->buff, pioFIFOAddr, ARB_wordsPerBuffer, false);
     }
     dma_channel_set_irq0_enabled(channel, true);
 }
