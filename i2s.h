@@ -36,11 +36,9 @@ void I2S_end();
 
 // from Stream
 int I2S_available();
-int I2S_read();
 int I2S_peek();
 void I2S_flush();
 
-size_t I2S_write(const uint8_t *buffer, size_t size);
 int I2S_availableForWrite();
 
 // Write 32 bit value to port, user responsible for packing/alignment, etc.
@@ -89,7 +87,6 @@ int I2S_wasHolding = 0;
 
 void (*I2S_cb)();
 
-PIOProgram *I2S_pioprog;
 PIO I2S_pio;
 int I2S_sm;
 

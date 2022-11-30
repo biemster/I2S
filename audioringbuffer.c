@@ -23,7 +23,6 @@
 #include "hardware/dma.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
-#include "pio_i2s.pio.h"
 #include "audioringbuffer.h"
 
 void ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction) {

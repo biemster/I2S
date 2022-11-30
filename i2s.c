@@ -20,6 +20,7 @@
 */
 
 #include "pico/stdlib.h"
+#include "hardware/pio.h"
 #include "audioringbuffer.h"
 #include "i2s.h"
 #include "pio_i2s.pio.h"
@@ -78,7 +79,7 @@ bool I2S_setBitsPerSample(int bps) {
 }
 
 bool I2S_setBuffers(size_t bufferWords, int32_t silenceSample) {
-    if (I2S_running || (buffers < 3) || (bufferWords < 8)) {
+    if (I2S_running || (bufferWords < 8)) {
         return false;
     }
     I2S_bufferWords = bufferWords;
@@ -90,7 +91,7 @@ bool I2S_setFrequency(int newFreq) {
     I2S_freq = newFreq;
     if (I2S_running) {
         float bitClk = I2S_freq * I2S_bps * 2.0 /* channels */ * 2.0 /* edges per clock */;
-        pio_sm_set_clkdiv(I2S_pio, I2S_sm, (float)clock_get_hz(clk_sys) / bitClk);
+        pio_sm_set_clkdiv(I2S_pio, I2S_sm, (float)clock_get_hz(5) / bitClk);
     }
     return true;
 }
@@ -117,8 +118,6 @@ bool I2S_begin() {
     I2S_running = true;
     I2S_hasPeeked = false;
     int off = 0;
-    I2S_pioprog = new PIOProgram(I2S_isOutput ? &pio_i2s_out_program : &pio_i2s_in_program);
-    I2S_pioprog->prepare(&I2S_pio, &I2S_sm, &off);
     if (I2S_isOutput) {
         pio_i2s_out_program_init(I2S_pio, I2S_sm, off, I2S_pinDOUT, I2S_pinBCLK, I2S_bps);
     } else {
@@ -133,7 +132,7 @@ bool I2S_begin() {
         I2S_silenceSample = (a << 16) | a;
     }
     ARB_init(I2S_bufferWords, I2S_silenceSample, I2S_isOutput ? OUTPUT : INPUT);
-    ARB_begin(pio_get_dreq(I2S_pio, I2S_sm, I2S_isOutput), I2S_isOutput ? &I2S_pio->txf[I2S_sm] : (volatile void*)&_pio->rxf[I2S_sm]);
+    ARB_begin(pio_get_dreq(I2S_pio, I2S_sm, I2S_isOutput), I2S_isOutput ? &I2S_pio->txf[I2S_sm] : (volatile void*)&I2S_pio->rxf[I2S_sm]);
     ARB_setCallback(I2S_cb);
     pio_sm_set_enabled(I2S_pio, I2S_sm, true);
 
@@ -149,42 +148,6 @@ int I2S_available() {
         return 0;
     }
     return ARB_available();
-}
-
-int I2S_read() {
-    if (!I2S_running || I2S_isOutput) {
-        return 0;
-    }
-
-    if (I2S_hasPeeked) {
-        I2S_hasPeeked = false;
-        return I2S_peekSaved;
-    }
-
-    if (I2S_wasHolding <= 0) {
-        read(&I2S_holdWord, true);
-        I2S_wasHolding = 32;
-    }
-
-    int ret;
-    switch (I2S_bps) {
-    case 8:
-        ret = I2S_holdWord >> 24;
-        I2S_holdWord <<= 8;
-        I2S_wasHolding -= 8;
-        return ret;
-    case 16:
-        ret = I2S_holdWord >> 16;
-        I2S_holdWord <<=  16;
-        I2S_wasHolding -= 32;
-        return ret;
-    case 24:
-    case 32:
-    default:
-        ret = I2S_holdWord;
-        I2S_wasHolding = 0;
-        return ret;
-    }
 }
 
 int I2S_peek() {
