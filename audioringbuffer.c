@@ -51,7 +51,7 @@ void ARB_deinit() {
 
         irq_set_enabled(DMA_IRQ_0, false);
         // TODO - how can we know if there are no other parts of the core using DMA0 IRQ??
-        irq_remove_handler(DMA_IRQ_0, _irq);
+        irq_remove_handler(DMA_IRQ_0, ARB_irq);
     }
 }
 

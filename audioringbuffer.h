@@ -23,7 +23,7 @@
 
 #pragma once
 
-enum PinMode {INPUT,OUTPUT};
+typedef enum PinMode {INPUT,OUTPUT} PinMode;
 
 void ARB_init(size_t bufferWords, int32_t silenceSample, PinMode direction);
 void ARB_deinit();
@@ -33,9 +33,7 @@ void ARB_setCallback(void (*fn)());
 bool ARB_begin(int dreq, volatile void *pioFIFOAddr);
 void ARB_dmaConfig(int channel);
 
-bool ARB_write(uint32_t v) { return ARB_write(v, true); }
 bool ARB_write(uint32_t v, bool sync);
-bool ARB_read(uint32_t *v) { return ARB_read(v, true); }
 bool ARB_read(uint32_t *v, bool sync);
 void ARB_flush();
 
