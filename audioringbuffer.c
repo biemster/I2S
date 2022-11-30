@@ -124,7 +124,7 @@ void ARB_dmaConfig(int channel) {
 }
 
 bool ARB_write(uint32_t v, bool sync) {
-    if (!ARB_running || !ARB_isOutput) {
+    if (!ARB_running || !ARB_currbuffers || !ARB_isOutput) {
         return false;
     }
     if (ARB_userBuffer == -1) {
@@ -160,7 +160,7 @@ bool ARB_write(uint32_t v, bool sync) {
 }
 
 bool ARB_read(uint32_t *v, bool sync) {
-    if (!ARB_running || ARB_isOutput) {
+    if (!ARB_running || !ARB_currbuffers || ARB_isOutput) {
         return false;
     }
     if (ARB_userBuffer == -1) {
