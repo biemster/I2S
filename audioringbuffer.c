@@ -80,14 +80,14 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
     }
     ARB2_channelDMA = dma_claim_unused_channel(true);
     if(ARB2_channelDMA == -1) {
-        dma_channel_unclaim(ARB_channelDMA[0]);
+        dma_channel_unclaim(ARB1_channelDMA);
         return false;
     }
 
     ARB_dmaConfig(ARB1_channelDMA);
     ARB_dmaConfig(ARB2_channelDMA);
 
-    irq_add_shared_handler(DMA_IRQ_0, _irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
+    irq_add_shared_handler(DMA_IRQ_0, ARB_irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
     irq_set_enabled(DMA_IRQ_0, true);
 
     ARB1_curBuffer = 0;
@@ -95,7 +95,8 @@ bool ARB_begin(int dreq, volatile void *pioFIFOAddr) {
     ARB1_nextBuffer = 2 % ARB_bufferCount;
     ARB2_nextBuffer = 2 % ARB_bufferCount;
 
-    dma_channel_start(channel);
+    dma_channel_start(ARB1_channelDMA);
+    dma_channel_start(ARB2_channelDMA);
 
     return true;
 }

@@ -23,12 +23,12 @@
 
 #include "audioringbuffer.h"
 
-void I2S_init(PinMode direction = OUTPUT);
+void I2S_init(PinMode direction);
 
 bool I2S_setBCLK(pin_size_t pin);
 bool I2S_setDATA(pin_size_t pin);
 bool I2S_setBitsPerSample(int bps);
-bool I2S_setBuffers(size_t buffers, size_t bufferWords, int32_t silenceSample = 0);
+bool I2S_setBuffers(size_t bufferWords, int32_t silenceSample = 0);
 bool I2S_setFrequency(int newFreq);
 
 bool I2S_begin(long sampleRate) {
@@ -97,7 +97,6 @@ pin_size_t I2S_pinBCLK;
 pin_size_t I2S_pinDOUT;
 int I2S_bps;
 int I2S_freq;
-size_t I2S_buffers;
 size_t I2S_bufferWords;
 int32_t I2S_silenceSample;
 bool I2S_isOutput;
@@ -116,7 +115,6 @@ int I2S_wasHolding = 0;
 
 void (*I2S_cb)();
 
-AudioRingBuffer *I2S_arb;
 PIOProgram *I2S_pioprog;
 PIO I2S_pio;
 int I2S_sm;

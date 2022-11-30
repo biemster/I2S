@@ -18,6 +18,7 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include "audioringbuffer.h"
 #include "i2s.h"
 #include "pio_i2s.pio.h"
 
@@ -45,9 +46,7 @@ void I2S_init(PinMode direction) {
     }
 #endif
     I2S_freq = 48000;
-    I2S_arb = nullptr;
-    I2S_cb = nullptr;
-    I2S_buffers = 8;
+    I2S_cb = NULL;
     I2S_bufferWords = 16;
     I2S_silenceSample = 0;
 }
@@ -76,11 +75,10 @@ bool I2S_setBitsPerSample(int bps) {
     return true;
 }
 
-bool I2S_setBuffers(size_t buffers, size_t bufferWords, int32_t silenceSample) {
+bool I2S_setBuffers(size_t bufferWords, int32_t silenceSample) {
     if (I2S_running || (buffers < 3) || (bufferWords < 8)) {
         return false;
     }
-    I2S_buffers = buffers;
     I2S_bufferWords = bufferWords;
     I2S_silenceSample = silenceSample;
     return true;
@@ -99,7 +97,7 @@ void I2S_onTransmit(void(*fn)(void)) {
     if (I2S_isOutput) {
         I2S_cb = fn;
         if (I2S_running) {
-            I2S_arb->setCallback(I2S_cb);
+            ARB_setCallback(I2S_cb);
         }
     }
 }
@@ -108,7 +106,7 @@ void I2S_onReceive(void(*fn)(void)) {
     if (!I2S_isOutput) {
         I2S_cb = fn;
         if (I2S_running) {
-            I2S_arb->setCallback(I2S_cb);
+            ARB_setCallback(I2S_cb);
         }
     }
 }
@@ -132,9 +130,9 @@ bool I2S_begin() {
         uint16_t a = I2S_silenceSample & 0xffff;
         I2S_silenceSample = (a << 16) | a;
     }
-    I2S_arb = new AudioRingBuffer(I2S_buffers, I2S_bufferWords, I2S_silenceSample, I2S_isOutput ? OUTPUT : INPUT);
-    I2S_arb->begin(pio_get_dreq(I2S_pio, I2S_sm, I2S_isOutput), I2S_isOutput ? &I2S_pio->txf[I2S_sm] : (volatile void*)&_pio->rxf[I2S_sm]);
-    I2S_arb->setCallback(I2S_cb);
+    ARB_init(I2S_bufferWords, I2S_silenceSample, I2S_isOutput ? OUTPUT : INPUT);
+    ARB_begin(pio_get_dreq(I2S_pio, I2S_sm, I2S_isOutput), I2S_isOutput ? &I2S_pio->txf[I2S_sm] : (volatile void*)&_pio->rxf[I2S_sm]);
+    ARB_setCallback(I2S_cb);
     pio_sm_set_enabled(I2S_pio, I2S_sm, true);
 
     return true;
@@ -148,7 +146,7 @@ int I2S_available() {
     if (!I2S_running || I2S_isOutput) {
         return 0;
     }
-    return I2S_arb->available();
+    return ARB_available();
 }
 
 int I2S_read() {
@@ -200,7 +198,7 @@ int I2S_peek() {
 
 void I2S_flush() {
     if (I2S_running) {
-        I2S_arb->flush();
+        ARB_flush();
     }
 }
 
@@ -244,7 +242,7 @@ size_t I2S_write(int32_t val, bool sync) {
     if (!I2S_running || !I2S_isOutput) {
         return 0;
     }
-    return I2S_arb->write(val, sync);
+    return ARB_write(val, sync);
 }
 
 size_t I2S_write8(int8_t l, int8_t r) {
@@ -280,7 +278,7 @@ size_t I2S_read(int32_t *val, bool sync) {
     if (!I2S_running || I2S_isOutput) {
         return 0;
     }
-    return I2S_arb->read((uint32_t *)val, sync);
+    return ARB_read((uint32_t *)val, sync);
 }
 
 bool I2S_read8(int8_t *l, int8_t *r) {
@@ -355,5 +353,5 @@ int I2S_availableForWrite() {
     if (!I2S_running || !I2S_isOutput) {
         return 0;
     }
-    return I2S_arb->available();
+    return ARB_available();
 }
