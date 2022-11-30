@@ -123,7 +123,7 @@ bool I2S_begin() {
     } else {
         pio_i2s_in_program_init(I2S_pio, I2S_sm, off, I2S_pinDOUT, I2S_pinBCLK, I2S_bps);
     }
-    setFrequency(I2S_freq);
+    I2S_setFrequency(I2S_freq);
     if (I2S_bps == 8) {
         uint8_t a = I2S_silenceSample & 0xff;
         I2S_silenceSample = (a << 24) | (a << 16) | (a << 8) | a;
