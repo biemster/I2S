@@ -118,7 +118,6 @@ void I2S_onReceive(void(*fn)(void)) {
 
 bool I2S_begin() {
     I2S_running = true;
-    I2S_hasPeeked = false;
     int off = 0;
     if (I2S_isOutput) {
         pio_i2s_out_program_init(I2S_pio, I2S_sm, off, I2S_pinDOUT, I2S_pinBCLK, I2S_bps);
