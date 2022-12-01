@@ -35,11 +35,6 @@ bool I2S_setFrequency(int newFreq);
 bool I2S_begin();
 void I2S_end();
 
-// from Stream
-int I2S_available();
-int I2S_peek();
-void I2S_flush();
-
 int I2S_availableForWrite();
 
 // Write 32 bit value to port, user responsible for packing/alignment, etc.
@@ -76,10 +71,6 @@ bool I2S_isOutput;
 
 bool I2S_running;
 
-bool I2S_hasPeeked;
-int32_t I2S_peekSaved;
-
-size_t I2S_writeNatural(int32_t s);
 uint32_t I2S_writtenData;
 bool I2S_writtenHalf;
 

@@ -145,66 +145,6 @@ void I2S_end() {
     I2S_running = false;
 }
 
-int I2S_available() {
-    if (!I2S_running || I2S_isOutput) {
-        return 0;
-    }
-    return ARB_available();
-}
-
-int I2S_peek() {
-    if (!I2S_running || I2S_isOutput) {
-        return 0;
-    }
-    if (!I2S_hasPeeked) {
-        I2S_peekSaved = read();
-        I2S_hasPeeked = true;
-    }
-    return I2S_peekSaved;
-}
-
-void I2S_flush() {
-    if (I2S_running) {
-        ARB_flush();
-    }
-}
-
-size_t I2S_writeNatural(int32_t s) {
-    if (!I2S_running || !I2S_isOutput) {
-        return 0;
-    }
-    switch (I2S_bps) {
-    case 8:
-        I2S_holdWord |= s & 0xff;
-        if (I2S_wasHolding >= 24) {
-            auto ret = write(I2S_holdWord, true);
-            I2S_holdWord = 0;
-            I2S_wasHolding = 0;
-            return ret;
-        } else {
-            I2S_holdWord <<= 8;
-            I2S_wasHolding += 8;
-            return 1;
-        }
-    case 16:
-        I2S_holdWord |= s & 0xffff;
-        if (I2S_wasHolding) {
-            auto ret = write(I2S_holdWord, true);
-            I2S_holdWord = 0;
-            I2S_wasHolding = 0;
-            return ret;
-        } else {
-            I2S_holdWord <<= 16;
-            I2S_wasHolding = 16;
-            return 1;
-        }
-    case 24:
-    case 32:
-    default:
-        return write(s, true);
-    }
-}
-
 size_t I2S_write(int32_t val, bool sync) {
     if (!I2S_running || !I2S_isOutput) {
         return 0;
