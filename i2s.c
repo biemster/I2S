@@ -20,6 +20,7 @@
 */
 
 #include "pico/stdlib.h"
+#include "hardware/clocks.h"
 #include "pio_i2s.pio.h"
 #include "i2s.h"
 
@@ -92,7 +93,7 @@ bool I2S_setFrequency(int newFreq) {
     I2S_freq = newFreq;
     if (I2S_running) {
         float bitClk = I2S_freq * I2S_bps * 2.0 /* channels */ * 2.0 /* edges per clock */;
-        pio_sm_set_clkdiv(I2S_pio, I2S_sm, (float)clock_get_hz(5) / bitClk);
+        pio_sm_set_clkdiv(I2S_pio, I2S_sm, (float)clock_get_hz(clk_sys) / bitClk);
     }
     return true;
 }
